@@ -1,5 +1,5 @@
 ---
---Teleporter 1.02
+--Teleporter 1.04
 --Copyright (C) 2012 Bad_Command
 --
 --This program is free software; you can redistribute it and/or modify
@@ -84,10 +84,7 @@ minetest.register_node("teleporter:teleporter_pad", {
 			return
 		end
 
-		local status,coords = pcall(teleporter_coordinates,fields.text)
-                if status == false then
-                   print("Bad coordinate format: " .. fields.text .. ": " .. coords)
-                end
+		local coords = teleporter_coordinates(fields.text)
 
 		local infotext = ""
 		if coords~=nil then	
@@ -149,16 +146,17 @@ function is_teleport_paired(coords)
 end
 
 function teleporter_coordinates(str) 
-	local x,y,z,desc = string.match(str, "(-?%d*),(-?%d*),(-?%d*),?(.*)")
+	local x,y,z,desc = string.match(str, "^(-?%d+),(-?%d+),(-?%d+),?(.*)$")
 	
 	if desc=="" then
 		desc = nil
 	end
 
-	if x==nil or y==nil or z==nil then
-		return nil
+	if x==nil or y==nil or z==nil or 
+		string.len(x) > 6 or string.len(y) > 6 or string.len(z) > 6 then
+			return nil
 	end
-        -- these raise an exception when x/y/z are not number parsable
+
 	x = x + 0.0
 	y = y + 0.0
 	z = z + 0.0 
