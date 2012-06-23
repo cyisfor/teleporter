@@ -21,7 +21,6 @@
 teleport_perms_to_build = true
 teleport_perms_to_configure = true
 teleport_requires_pairing = true
-teleport_default_coordinates = {x=0, y=0, z=0, desc="Spawn"}
 teleport_pairing_check_radius = 2
 
 minetest.register_craft({
@@ -50,12 +49,9 @@ minetest.register_node("teleporter:teleporter_pad", {
         on_construct = function(pos)
                 local meta = minetest.env:get_meta(pos)
                 meta:set_string("formspec", "hack:sign_text_input")
-                meta:set_string("infotext", "\"Teleport to "..teleport_default_coordinates.desc.."\"")
-		meta:set_string("text", teleport_default_coordinates.x..","..teleport_default_coordinates.y..","..teleport_default_coordinates.z..","..teleport_default_coordinates.desc)
-		meta:set_float("enabled", -1)
-		meta:set_float("x", teleport_default_coordinates.x)
-		meta:set_float("y", teleport_default_coordinates.y)
-		meta:set_float("z", teleport_default_coordinates.z)
+                meta:set_string("infotext", "\"Uninitialized\"")
+		meta:set_string("text", "")
+		meta:set_int("enabled", 0)
         end,
 	after_place_node = function(pos, placer)
 		local meta = minetest.env:get_meta(pos)
@@ -67,7 +63,7 @@ minetest.register_node("teleporter:teleporter_pad", {
 			minetest.env:remove_node(pos)
 			minetest.env:add_item(pos, 'teleporter:teleporter_pad')
 		else
-			meta:set_float("enabled", 1)
+			meta:set_int("enabled", 1)
 		end
 
 	end,
@@ -88,9 +84,7 @@ minetest.register_node("teleporter:teleporter_pad", {
 			return
 		end
 
-		local status,coords = pcall(function () 
-                      return teleporter_coordinates(fields.text) 
-                end)
+		local status,coords = pcall(teleporter_coordinates,fields.text)
                 if status == false then
                    print("Bad coordinate format: " .. fields.text .. ": " .. coords)
                 end
@@ -104,9 +98,9 @@ minetest.register_node("teleporter:teleporter_pad", {
 				minetest.chat_send_player(name, 'Teleporter:  There is no recently-used teleporter pad at the destination!')
 		                meta:set_string("text", fields.text)
 				infotext="Teleporter is Disabled"
-				meta:set_float("enabled", -1)
+				meta:set_int("enabled", 0)
 			else
-				meta:set_float("enabled", 1)
+				meta:set_int("enabled", 1)
 				if coords.desc~=nil then
 					infotext="Teleport to "..coords.desc
 				else
@@ -115,8 +109,12 @@ minetest.register_node("teleporter:teleporter_pad", {
 			end
 		else
 			minetest.chat_send_player(name, 'Teleporter:  Incorrect coordinates.  Enter them as \'X,Y,Z,Description\'')
-			meta:set_float("enabled", -1)
-			infotext="Teleporter Offline"
+			meta:set_int("enabled", 0)
+			if string.len(fields.text) > 0 then
+                           infotext=fields.text
+                        else
+                           infotext="Uninitialized"
+                        end
 		end
 
                 print((sender:get_player_name() or "").." entered \""..fields.text..
@@ -181,7 +179,7 @@ minetest.register_abm(
 		for k, player in pairs(objs) do
 			if player:get_player_name()~=nil then 
 				local meta = minetest.env:get_meta(pos)
-				if meta:get_float("enabled") > 0 then
+				if meta:get_int("enabled") == 1 then
 					local target_coords={x=meta:get_float("x"), y=meta:get_float("y"), z=meta:get_float("z")}
 					minetest.sound_play("teleporter_teleport", {pos = pos, gain = 1.0, max_hear_distance = 10,})
 					player:moveto(target_coords, false)
